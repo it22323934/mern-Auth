@@ -7,8 +7,8 @@ export default function OAuth() {
     const dispatch=useDispatch();
     const handleGoogleClick = async () => {
         try {
-            const auth=getAuth(app);
             const provider=new GoogleAuthProvider();
+            const auth=getAuth(app);
             const result=await signInWithPopup(auth,provider);
             const res=await fetch("/api/auth/google",{
                 method:"POST",
@@ -23,7 +23,6 @@ export default function OAuth() {
             });
             const data=await res.json();
             dispatch(signInSuccess(data));
-            navigate("/");
         } catch (error) {
             console.log(error);
         }
