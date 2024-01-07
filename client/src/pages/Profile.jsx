@@ -1,5 +1,5 @@
 import { useSelector } from "react-redux";
-import React, { useRef, useEffect,useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   getDownloadURL,
   getStorage,
@@ -8,7 +8,14 @@ import {
 } from "firebase/storage";
 import { app } from "../firebase";
 import { useDispatch } from "react-redux";
-import {updateUserFailure,updateUserSuccess,updateUserStart} from '../redux/user/userSlice';
+import {
+  updateUserFailure,
+  updateUserSuccess,
+  updateUserStart,
+  deleteUserStart,
+  deleteUserFailure,
+  deleteUserSuccess,
+} from "../redux/user/userSlice";
 export default function UserProfile() {
   const dispatch = useDispatch();
   const fileRef = useRef();
@@ -17,7 +24,7 @@ export default function UserProfile() {
   const [imageError, setImageError] = useState(false);
   const [formData, setFormData] = useState({});
   const [updateSuccess, setUpdateSuccess] = useState(false);
-  const { currentUser,loading,error } = useSelector((state) => state.user);
+  const { currentUser, loading, error } = useSelector((state) => state.user);
   useEffect(() => {
     if (image) {
       handleFileUpload(image);
@@ -29,19 +36,19 @@ export default function UserProfile() {
     const fileName = new Date().getTime() + image.name;
     const storageRef = ref(storage, fileName);
     const uploadTask = uploadBytesResumable(storageRef, image);
-    uploadTask.on('state_changed', 
-    (snapshot) => {
-      const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-      setImagePercent(Math.round(progress));
-    },
-    (error) => {
-      setImageError(true);
-    },
-    () => {
-        getDownloadURL(uploadTask.snapshot.ref).then
-        ((downloadURL) =>
-          setFormData({ ...formData, profilePicture: 
-          downloadURL })
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress =
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setImagePercent(Math.round(progress));
+      },
+      (error) => {
+        setImageError(true);
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) =>
+          setFormData({ ...formData, profilePicture: downloadURL })
         );
       }
     );
@@ -55,9 +62,9 @@ export default function UserProfile() {
     try {
       dispatch(updateUserStart());
       const res = await fetch(`/api/user/update/${currentUser._id}`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
@@ -73,6 +80,22 @@ export default function UserProfile() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      dispatch(deleteUserStart());
+      const res =await fetch(`/api/user/delete/${currentUser._id}`,{
+        method:"DELETE",
+      });
+      const data=await res.json();
+      if(data.success===false){
+        dispatch(deleteUserFailure(data));
+        return;
+      }
+      dispatch(deleteUserSuccess(data));
+    } catch (error) {
+      dispatch(deleteUserFailure(error));
+    }
+  }
   return (
     <div className="p-3 max-w-lg mx-auto">
       <h1 className="text-3xl font-semibold text-center my-7">User Profile</h1>
@@ -92,42 +115,56 @@ export default function UserProfile() {
         />
         <p className="text-sm self-center">
           {imageError ? (
-          <span className="text-red-700 cursor-pointer">Erro Uploading Image (file size must be less than 2MB)</span>)
-          :imagePercent >0 && imagePercent <100 ? (
-            <span className="text-green-700 cursor-pointer">Uploading {imagePercent}%</span>):imagePercent ===100 ?(
-              <span className="text-green-700 cursor-pointer">Image Uploaded Successfully</span>):''
-            }
+            <span className="text-red-700 cursor-pointer">
+              Erro Uploading Image (file size must be less than 2MB)
+            </span>
+          ) : imagePercent > 0 && imagePercent < 100 ? (
+            <span className="text-green-700 cursor-pointer">
+              Uploading {imagePercent}%
+            </span>
+          ) : imagePercent === 100 ? (
+            <span className="text-green-700 cursor-pointer">
+              Image Uploaded Successfully
+            </span>
+          ) : (
+            ""
+          )}
         </p>
         <input
           type="text"
           id="username"
           placeholder="Username"
           className="bg-slate-100 rounded-lg p-3"
-          defaultValue={currentUser.username}  onChange={handleChange}
+          defaultValue={currentUser.username}
+          onChange={handleChange}
         ></input>
         <input
           type="email"
           id="email"
           placeholder="Email"
           className="bg-slate-100 rounded-lg p-3"
-          defaultValue={currentUser.email} onChange={handleChange}
+          defaultValue={currentUser.email}
+          onChange={handleChange}
         ></input>
         <input
           type="password"
           id="password"
           placeholder="Password"
-          className="bg-slate-100 rounded-lg p-3" onChange={handleChange}
+          className="bg-slate-100 rounded-lg p-3"
+          onChange={handleChange}
         ></input>
         <button className="bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-50">
-          {loading ? 'loading...':'Update'}
+          {loading ? "loading..." : "Update"}
         </button>
       </form>
       <div className="flex justify-between mt-5">
-        <span className="text-red-700 cursor-pointer">Delete</span>
+        <span onClick={handleDeleteAccount} className="text-red-700 cursor-pointer">Delete</span>
         <span className="text-red-700 cursor-pointer">Sign Out</span>
       </div>
-      <p className="text-red-700 mt-5">{error && 'Something Went Wrong'}</p>
-      <p className="text-green-700 mt-5">{updateSuccess && 'User is Update Successfully'}</p>
+      <p className="text-red-700 mt-5">{error && "Something Went Wrong"}</p>
+      <p className="text-green-700 mt-5">
+        {updateSuccess && "User is Update Successfully"}
+      </p>
     </div>
   );
 }
